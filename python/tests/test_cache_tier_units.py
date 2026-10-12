@@ -119,7 +119,7 @@ def test_all_unavailable_raises_with_every_attempt():
 
 @pytest.mark.parametrize(
     "code",
-    [grpc.StatusCode.INTERNAL, grpc.StatusCode.DEADLINE_EXCEEDED, grpc.StatusCode.UNIMPLEMENTED],
+    [grpc.StatusCode.INTERNAL, grpc.StatusCode.UNIMPLEMENTED, grpc.StatusCode.RESOURCE_EXHAUSTED],
 )
 def test_other_errors_are_not_retried(code):
     a, b = FakeStub(code), FakeStub()
@@ -130,12 +130,47 @@ def test_other_errors_are_not_retried(code):
     assert b.calls == 0
 
 
-def test_deadline_on_a_channel_that_never_connected_counts_as_unreachable():
+@pytest.mark.parametrize("state", [grpc.ChannelConnectivity.TRANSIENT_FAILURE, grpc.ChannelConnectivity.READY])
+def test_deadline_fails_over_whether_or_not_the_channel_connected(state):
+    # READY is the hung replica: the connection is up and nothing comes back
     a, b = FakeStub(grpc.StatusCode.DEADLINE_EXCEEDED), FakeStub()
     lb = make(a, b)
-    lb.replicas[0].state = grpc.ChannelConnectivity.TRANSIENT_FAILURE
+    lb.replicas[0].state = state
     answer = lb.call("ByParcel", None, 1)
     assert (answer.replica, answer.attempts) == ("r2", ["r1"])
+
+
+def test_every_replica_hanging_costs_one_attempt_each_and_ends_in_all_down():
+    a, b, c = (FakeStub(grpc.StatusCode.DEADLINE_EXCEEDED) for _ in range(3))
+    lb = make(a, b, c)
+    with pytest.raises(AllReplicasDown) as e:
+        lb.call("ByParcel", None, 1)
+    assert sorted(e.value.attempts) == ["r1", "r2", "r3"]
+    assert (a.calls, b.calls, c.calls) == (1, 1, 1)
+
+
+def test_hung_replica_is_skipped_during_cooldown_then_probed_briefly():
+    clock = Clock()
+    a, b = FakeStub(grpc.StatusCode.DEADLINE_EXCEEDED), FakeStub()
+    lb = make(a, b, cooldown=5.0, clock=clock)
+    lb.probe_timeout = 0.25
+    lb.call("ByParcel", None, 1.0)
+    for _ in range(4):
+        assert lb.call("ByParcel", None, 1.0).attempts == []
+    assert a.timeouts == [1.0], "one full deadline was paid, then the replica was left alone"
+    clock.now += 6
+    lb.call("ByParcel", None, 1.0)
+    lb.call("ByParcel", None, 1.0)
+    assert a.timeouts[1] == 0.25
+
+
+@pytest.mark.parametrize("method", ["Upload", "Aggregate", "Info"])
+def test_only_lookups_are_ever_retried(method):
+    a, b = FakeStub(grpc.StatusCode.UNAVAILABLE), FakeStub()
+    lb = make(a, b)
+    with pytest.raises(ValueError):
+        lb.call(method, None, 1)
+    assert a.calls == 0 and b.calls == 0
 
 
 def test_suspect_replica_is_probed_with_a_short_deadline():

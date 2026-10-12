@@ -18,6 +18,9 @@ CHANNEL_OPTIONS = [
 ]
 
 
+READ_METHODS = frozenset({"ByParcel", "ByAddress", "ByStreet", "ByZip", "Health"})
+
+
 class AllReplicasDown(Exception):
     def __init__(self, attempts):
         super().__init__("all replicas unavailable")
@@ -76,15 +79,18 @@ class Balancer:
 
     A call starts at the next replica in the rotation. If that replica is
     unreachable it is skipped for `cooldown` seconds (still tried last, in case
-    everything is marked down) and the call moves to the next one. Unreachable
-    means gRPC UNAVAILABLE, or DEADLINE_EXCEEDED on a channel that never got
-    connected: some networks (a Windows loopback, a container whose address just
-    vanished) swallow the refusal and the call only ever sees its deadline. Any
-    other gRPC error is raised as UpstreamError without trying another replica.
+    everything is marked down) and the call moves to the next one. Each replica
+    is tried at most once per call. Unreachable means gRPC UNAVAILABLE (dead) or
+    DEADLINE_EXCEEDED (hung, or a network that swallows the refusal so the call
+    only ever sees its deadline). Any other gRPC error is raised as
+    UpstreamError without trying another replica.
+
+    Retrying is safe only because lookups are idempotent reads, so call() takes
+    nothing outside READ_METHODS. The upload service is not behind this class.
 
     A replica that failed last time, or whose channel is not connected, is tried
-    with `probe_timeout` instead of the full deadline, so a dead one costs a
-    request at most that much."""
+    with `probe_timeout` instead of the full deadline, so a dead or hung one
+    costs a request at most one full deadline once and `probe_timeout` after."""
 
     def __init__(self, replicas, cooldown: float = 5.0, probe_timeout: float = 0.5,
                  clock=time.monotonic, on_error=None):
@@ -108,12 +114,13 @@ class Balancer:
             down = [r for r in rotated if r.down_until > now]
         return up + down
 
-    def _unreachable(self, replica, code) -> bool:
-        if code == grpc.StatusCode.UNAVAILABLE:
-            return True
-        return code == grpc.StatusCode.DEADLINE_EXCEEDED and replica.state != grpc.ChannelConnectivity.READY
+    @staticmethod
+    def _unreachable(code) -> bool:
+        return code in (grpc.StatusCode.UNAVAILABLE, grpc.StatusCode.DEADLINE_EXCEEDED)
 
     def call(self, method: str, request, timeout: float) -> Answer:
+        if method not in READ_METHODS:
+            raise ValueError(f"{method} is not a read-only lookup; the balancer only fails over reads")
         attempts = []
         for replica in self._order():
             # a channel that is not connected right now (the replica's connection
@@ -125,7 +132,7 @@ class Balancer:
             except grpc.RpcError as e:
                 code = e.code()
                 self._on_error(replica.name, code)
-                if self._unreachable(replica, code):
+                if self._unreachable(code):
                     with self._lock:
                         replica.down_until = self._clock() + self.cooldown
                         replica.suspect = True

@@ -1,4 +1,5 @@
 import re
+import time
 
 import pytest
 
@@ -197,3 +198,43 @@ def test_config_from_env():
     c = Config.from_env({"REPLICAS": "a=h1:1, h2:2", "CACHE_SIZE": "9", "COOLDOWN": "1.5"})
     assert c.replicas == [("a", "h1:1"), ("h2", "h2:2")]
     assert (c.cache_size, c.cooldown, c.default_limit) == (9, 1.5, 100)
+
+
+class Hung(LookupServicer):
+    """Accepts the call and never answers in time."""
+
+    def ByParcel(self, request, context):
+        time.sleep(1.5)
+        return super().ByParcel(request, context)
+
+
+def test_a_hung_replica_is_failed_over_and_then_left_alone(dataset):
+    started = []
+    replicas = []
+    for name, servicer in (("hung", Hung(dataset, "hung")), ("ok", LookupServicer(dataset, "ok"))):
+        server, port = build_server(dataset, 0, name, workers=8, servicer=servicer)
+        server.start()
+        started.append(server)
+        replicas.append((name, f"127.0.0.1:{port}"))
+    try:
+        app = create_app(Config(replicas=replicas, cache_size=0, upstream_timeout=0.4, cooldown=60))
+        client = app.test_client()
+        ps = parcels(dataset, 6)
+
+        t0 = time.perf_counter()
+        first = client.get(f"/parcel/{ps[0]}")
+        slow = time.perf_counter() - t0
+        assert first.status_code == 200 and first.get_json()["source"] == "ok"
+        assert first.get_json()["attempts"] == ["hung"]
+        assert 0.35 < slow < 1.4, "one short deadline was spent, not the replica's 1.5 s"
+
+        t0 = time.perf_counter()
+        rest = [client.get(f"/parcel/{p}").get_json() for p in ps[1:]]
+        assert time.perf_counter() - t0 < 1.0
+        assert {r["source"] for r in rest} == {"ok"} and all(r["attempts"] == [] for r in rest)
+        assert client.get("/stats").get_json()["replicas"] == {"hung": "down", "ok": "up"}
+        text = client.get("/metrics").get_data(as_text=True)
+        assert 'rls_upstream_errors_total{code="DEADLINE_EXCEEDED",replica="hung"} 1.0' in text
+    finally:
+        for s in started:
+            s.stop(0)
