@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# The dataset pods read the small synthetic fixture from a ConfigMap, so the
+# cluster needs no download and no volume. For the Madison data, mount a volume
+# that holds madison.csv.gz and change DATA_PATH in dataset.yaml.
+#
+# The fixture lives outside this directory, so build with
+#   kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/k8s | kubectl apply -f -
+# (scripts/k8s_smoke.sh does exactly that).
+
+resources:
+  - dataset.yaml
+  - cache.yaml
+  - table.yaml
+
+configMapGenerator:
+  - name: dataset-fixture
+    files:
+      - sample.csv.gz=../../testdata/sample.csv.gz
+generatorOptions:
+  disableNameSuffixHash: true

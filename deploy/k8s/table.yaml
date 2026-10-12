@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: table
+spec:
+  replicas: 1   # one writer: the upload lock is in-process, so do not scale this out
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: table
+  template:
+    metadata:
+      labels:
+        app: table
+    spec:
+      containers:
+        - name: table
+          image: rls-python:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "lookupsvc.table.server"]
+          env:
+            - name: PORT
+              value: "50061"
+            - name: DATA_DIR
+              value: /var/lib/tablestore
+          ports:
+            - containerPort: 50061
+          readinessProbe:
+            exec:
+              command: ["python", "-m", "lookupsvc.table.server", "--healthcheck"]
+            periodSeconds: 5
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: store
+              mountPath: /var/lib/tablestore
+      volumes:
+        - name: store
+          emptyDir: {}   # swap for a PersistentVolumeClaim to keep uploads across pod restarts
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: table
+spec:
+  selector:
+    app: table
+  ports:
+    - port: 50061
+      targetPort: 50061

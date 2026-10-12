@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: dataset
+spec:
+  clusterIP: None   # headless: the cache tier addresses dataset-0 and dataset-1 by name
+  selector:
+    app: dataset
+  ports:
+    - name: grpc
+      port: 50051
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dataset
+spec:
+  serviceName: dataset
+  replicas: 2
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: dataset
+  template:
+    metadata:
+      labels:
+        app: dataset
+    spec:
+      containers:
+        - name: dataset
+          image: rls-go:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DATA_PATH
+              value: /data/sample.csv.gz
+            - name: PORT
+              value: "50051"
+            - name: REPLICA_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          ports:
+            - containerPort: 50051
+          readinessProbe:
+            exec:
+              command: ["/dataset-go", "-healthcheck"]
+            periodSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["/dataset-go", "-healthcheck"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              memory: 64Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+              readOnly: true
+      volumes:
+        - name: data
+          configMap:
+            name: dataset-fixture

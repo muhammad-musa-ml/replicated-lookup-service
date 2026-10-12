@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cache
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cache
+  template:
+    metadata:
+      labels:
+        app: cache
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: cache
+          image: rls-python:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - gunicorn
+            - --bind=0.0.0.0:8000
+            - --workers=1
+            - --threads=16
+            - --access-logfile=-
+            - lookupsvc.cache_tier.wsgi:app
+          env:
+            - name: REPLICAS
+              value: "dataset-0=dataset-0.dataset:50051,dataset-1=dataset-1.dataset:50051"
+            - name: CACHE_SIZE
+              value: "256"
+            - name: UPSTREAM_TIMEOUT
+              value: "2.0"
+            - name: COOLDOWN
+              value: "5.0"
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            periodSeconds: 3
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cache
+spec:
+  type: NodePort
+  selector:
+    app: cache
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30080

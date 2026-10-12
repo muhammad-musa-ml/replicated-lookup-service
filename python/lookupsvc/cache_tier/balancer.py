@@ -11,6 +11,8 @@ CHANNEL_OPTIONS = [
     ("grpc.max_send_message_length", 32 * 1024 * 1024),
     ("grpc.initial_reconnect_backoff_ms", 200),
     ("grpc.max_reconnect_backoff_ms", 2000),
+    # a restarted pod comes back on a new address; the default re-resolves at most every 30 s
+    ("grpc.dns_min_time_between_resolutions_ms", 1000),
     ("grpc.keepalive_time_ms", 10000),
     ("grpc.keepalive_timeout_ms", 3000),
 ]
