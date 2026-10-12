@@ -202,3 +202,12 @@ def test_error_hook_sees_every_failure():
 def test_no_replicas_is_a_config_error():
     with pytest.raises(ValueError):
         Balancer([])
+
+
+def test_lru_overwrite_counts_as_use():
+    c = LRUCache(2)
+    c.put("a", 1)
+    c.put("b", 2)
+    c.put("a", 3)
+    c.put("c", 4)
+    assert c.get("a") == (True, 3) and c.get("b") == (False, None)

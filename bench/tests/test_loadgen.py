@@ -190,3 +190,12 @@ def test_local_source_passes_decode_more_but_return_the_same_document():
     one = local_source(SAMPLE, parcels, passes=1)()(parcels[0])
     many = local_source(SAMPLE, parcels, passes=7)()(parcels[0])
     assert one == many
+
+
+def test_lru_overwrite_counts_as_use():
+    c = BoundedCache(2, "lru")
+    c.put("a", 1)
+    c.put("b", 2)
+    c.put("a", 3)  # a is now the freshest
+    c.put("c", 4)  # evicts b
+    assert c.get("a") == (True, 3) and not c.get("b")[0]
