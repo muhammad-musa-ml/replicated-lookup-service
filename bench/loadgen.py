@@ -149,10 +149,11 @@ def consume(payload: dict) -> int:
 
 
 def run_load(make_fetch, workload: list[str], threads: int, cache: BoundedCache,
-             record_events: bool = False, t0: float | None = None) -> RunResult:
+             record_events: bool = False, t0: float | None = None,
+             stop: threading.Event | None = None) -> RunResult:
     """make_fetch() is called once per thread and returns fetch(key) -> payload
     dict (it may keep a per-thread HTTP session). Errors count, they do not stop
-    the run."""
+    the run; setting `stop` does, after the request in flight."""
     parts = ranges(len(workload), threads)
     results = [RunResult() for _ in parts]
     ready = threading.Barrier(threads + 1)
@@ -163,6 +164,8 @@ def run_load(make_fetch, workload: list[str], threads: int, cache: BoundedCache,
         fetch = make_fetch()
         ready.wait()
         for key in workload[lo:hi]:
+            if stop is not None and stop.is_set():
+                break
             res.requests += 1
             hit, payload = cache.get(key)
             if hit:
@@ -221,9 +224,11 @@ def http_source(base_url: str):
     return make_fetch
 
 
-def local_source(path, parcels: list[str]):
+def local_source(path, parcels: list[str], passes: int = 1):
     """No network: answers come from an in-memory table of JSON documents, so a
-    run measures the client (cache, lock, JSON, consume) and nothing else."""
+    run measures the client (cache, lock, JSON, consume) and nothing else.
+    `passes` decodes each document that many times, standing in for larger
+    responses."""
     wanted = set(parcels)
     docs: dict[str, list] = {}
     opener = gzip.open if str(path).endswith(".gz") else open
@@ -237,7 +242,13 @@ def local_source(path, parcels: list[str]):
     encoded = {k: json.dumps({"properties": v, "total": len(v), "error": ""}) for k, v in docs.items()}
 
     def make_fetch():
-        return lambda key: json.loads(encoded[key])
+        def fetch(key):
+            doc = encoded[key]
+            for _ in range(passes - 1):
+                json.loads(doc)
+            return json.loads(doc)
+
+        return fetch
 
     return make_fetch
 
@@ -264,11 +275,13 @@ def main(argv=None) -> int:
     ap.add_argument("--skew", type=float, default=1.1)
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--warmup", type=int, default=0, help="extra requests first, not measured")
+    ap.add_argument("--passes", type=int, default=1, help="local mode: JSON decode passes per fetched document")
     args = ap.parse_args(argv)
 
     parcels = load_parcels(args.data, args.keys or None)
     workload = zipf_workload(parcels, args.requests + args.warmup, args.skew, args.seed)
-    make_fetch = http_source(args.url) if args.mode == "http" else local_source(args.data, parcels)
+    make_fetch = (http_source(args.url) if args.mode == "http"
+                  else local_source(args.data, parcels, args.passes))
 
     cache = BoundedCache(args.cache, args.policy)
     if args.warmup:
@@ -276,7 +289,7 @@ def main(argv=None) -> int:
     result = run_load(make_fetch, workload[args.warmup:], args.threads, cache)
 
     out = {"mode": args.mode, "threads": args.threads, "cache": args.cache, "policy": args.policy,
-           "skew": args.skew, "keys": len(parcels), **interpreter_info(), **result.summary(),
+           "skew": args.skew, "keys": len(parcels), "passes": args.passes, **interpreter_info(), **result.summary(),
            "checksum": result.checksum}
     print(json.dumps(out))
     return 0 if result.errors == 0 else 2
