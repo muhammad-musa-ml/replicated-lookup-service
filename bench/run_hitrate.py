@@ -6,7 +6,7 @@ Three series over the same Zipf workload of parcel ids:
   client-lru   the load client's own cache, no network involved
   client-fifo  same, FIFO eviction
 
-    python bench/run_hitrate.py --sizes 10,100,1000,10000,50000 --requests 200000 --reps 5
+    python bench/run_hitrate.py        # defaults: sizes 10..10000, 30000 requests, 5 repetitions
 """
 import argparse
 import sys
@@ -51,8 +51,8 @@ def row(series, size, rep, seed, args, hit):
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--sizes", default="10,100,1000,10000,50000")
-    ap.add_argument("--requests", type=int, default=100000)
+    ap.add_argument("--sizes", default="10,100,1000,3000,10000")
+    ap.add_argument("--requests", type=int, default=30000)
     ap.add_argument("--keys", type=int, default=0, help="distinct parcels (0 = all)")
     ap.add_argument("--skew", type=float, default=1.1)
     ap.add_argument("--threads", type=int, default=4, help="load threads for the server series")

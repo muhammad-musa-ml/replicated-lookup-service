@@ -4,7 +4,7 @@ For each cache-tier configuration a fresh container serves the same warmed-up
 Zipf workload from a load client that has no cache of its own, so every request
 is a real HTTP round trip. Percentiles are taken over all requests of a run.
 
-    python bench/run_latency.py --server-caches 0,5000 --requests 20000 --reps 5
+    python bench/run_latency.py        # defaults: server cache 0 and 5000, 20000 requests, 5 repetitions
 """
 import argparse
 import sys
