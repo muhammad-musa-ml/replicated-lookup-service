@@ -55,7 +55,10 @@ class Replica:
 def connect(name: str, target: str) -> Replica:
     channel = grpc.insecure_channel(target, options=CHANNEL_OPTIONS)
     replica = Replica(name, target, pb_grpc.LookupStub(channel), channel=channel)
-    channel.subscribe(replica.on_state)
+    replica.state = grpc.ChannelConnectivity.IDLE
+    # try_to_connect keeps the channel dialing in the background, so a healthy
+    # replica is READY before the first request and a returning one is picked up
+    channel.subscribe(replica.on_state, try_to_connect=True)
     return replica
 
 
@@ -77,8 +80,9 @@ class Balancer:
     vanished) swallow the refusal and the call only ever sees its deadline. Any
     other gRPC error is raised as UpstreamError without trying another replica.
 
-    A replica that failed last time is retried with `probe_timeout` instead of
-    the full deadline, so a dead one costs a request at most that much."""
+    A replica that failed last time, or whose channel is not connected, is tried
+    with `probe_timeout` instead of the full deadline, so a dead one costs a
+    request at most that much."""
 
     def __init__(self, replicas, cooldown: float = 5.0, probe_timeout: float = 0.5,
                  clock=time.monotonic, on_error=None):
@@ -110,7 +114,10 @@ class Balancer:
     def call(self, method: str, request, timeout: float) -> Answer:
         attempts = []
         for replica in self._order():
-            wait = min(timeout, self.probe_timeout) if replica.suspect else timeout
+            # a channel that is not connected right now (the replica's connection
+            # just dropped, or it never came up) gets the short deadline too
+            shaky = replica.suspect or replica.state != grpc.ChannelConnectivity.READY
+            wait = min(timeout, self.probe_timeout) if shaky else timeout
             try:
                 reply = getattr(replica.stub, method)(request, timeout=wait)
             except grpc.RpcError as e:

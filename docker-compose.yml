@@ -1,0 +1,158 @@
+name: replicated-lookup-service
+
+# Which dataset implementation the cache tier talks to: py, java or go. The
+# matching pair of replicas is started through COMPOSE_PROFILES (see .env).
+# `docker compose --profile all up` starts all three pairs; the cache tier still
+# uses DATASET_IMPL.
+
+x-replica: &replica
+  restart: "no"
+  volumes:
+    - ./data:/data:ro
+  environment: &replica-env
+    DATA_PATH: /data/madison.csv.gz
+    PORT: "50051"
+  depends_on:
+    data-init:
+      condition: service_completed_successfully
+
+services:
+  data-init:
+    build: &python-build { context: ., dockerfile: python/Dockerfile }
+    image: rls-python
+    command: ["python", "-m", "lookupsvc.fetch", "--out", "/data"]
+    volumes:
+      - ./data:/data
+    mem_limit: 1g
+    restart: "no"
+
+  dataset-py-1:
+    build: *python-build
+    <<: *replica
+    image: rls-python
+    command: ["python", "-m", "lookupsvc.dataset_server"]
+    profiles: [py, all]
+    environment: { <<: *replica-env, REPLICA_ID: py-1 }
+    ports: ["8210:50051"]
+    mem_limit: 512m
+    healthcheck: &py-health
+      test: ["CMD", "python", "-m", "lookupsvc.dataset_server", "--healthcheck"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 15s
+
+  dataset-py-2:
+    build: *python-build
+    <<: *replica
+    image: rls-python
+    command: ["python", "-m", "lookupsvc.dataset_server"]
+    profiles: [py, all]
+    environment: { <<: *replica-env, REPLICA_ID: py-2 }
+    ports: ["8211:50051"]
+    mem_limit: 512m
+    healthcheck: *py-health
+
+  dataset-java-1:
+    <<: *replica
+    build: { context: ., dockerfile: java/Dockerfile }
+    image: rls-java
+    profiles: [java, all]
+    environment: { <<: *replica-env, REPLICA_ID: java-1 }
+    ports: ["8212:50051"]
+    mem_limit: 512m
+    healthcheck: &java-health
+      test: ["CMD", "/opt/dataset-java/bin/dataset-java", "--healthcheck"]
+      interval: 5s
+      timeout: 5s
+      retries: 8
+      start_period: 25s
+
+  dataset-java-2:
+    <<: *replica
+    image: rls-java
+    profiles: [java, all]
+    environment: { <<: *replica-env, REPLICA_ID: java-2 }
+    ports: ["8213:50051"]
+    mem_limit: 512m
+    healthcheck: *java-health
+
+  dataset-go-1:
+    <<: *replica
+    build: { context: ., dockerfile: go/Dockerfile }
+    image: rls-go
+    profiles: [go, all]
+    environment: { <<: *replica-env, REPLICA_ID: go-1 }
+    ports: ["8214:50051"]
+    mem_limit: 256m
+    healthcheck: &go-health
+      test: ["CMD", "/dataset-go", "-healthcheck"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
+
+  dataset-go-2:
+    <<: *replica
+    image: rls-go
+    profiles: [go, all]
+    environment: { <<: *replica-env, REPLICA_ID: go-2 }
+    ports: ["8215:50051"]
+    mem_limit: 256m
+    healthcheck: *go-health
+
+  cache:
+    build: *python-build
+    image: rls-python
+    command:
+      - gunicorn
+      - --bind=0.0.0.0:8000
+      - --workers=1
+      - --threads=16
+      - --access-logfile=-
+      - lookupsvc.cache_tier.wsgi:app
+    environment:
+      REPLICAS: "dataset-${DATASET_IMPL:-go}-1=dataset-${DATASET_IMPL:-go}-1:50051,dataset-${DATASET_IMPL:-go}-2=dataset-${DATASET_IMPL:-go}-2:50051"
+      CACHE_SIZE: ${CACHE_SIZE:-256}
+      UPSTREAM_TIMEOUT: "2.0"
+      COOLDOWN: "5.0"
+    ports: ["${CACHE_PORT:-8200}:8000"]
+    mem_limit: 256m
+    restart: "no"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+      interval: 5s
+      timeout: 4s
+      retries: 6
+      start_period: 5s
+
+  table:
+    build: *python-build
+    image: rls-python
+    command: ["python", "-m", "lookupsvc.table.server"]
+    environment:
+      PORT: "50061"
+      DATA_DIR: /var/lib/tablestore
+    volumes:
+      - table-data:/var/lib/tablestore
+    ports: ["${TABLE_PORT:-8201}:50061"]
+    mem_limit: 1g
+    restart: "no"
+    healthcheck:
+      test: ["CMD", "python", "-m", "lookupsvc.table.server", "--healthcheck"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: [monitoring]
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports: ["8220:9090"]
+    mem_limit: 256m
+    restart: "no"
+
+volumes:
+  table-data:

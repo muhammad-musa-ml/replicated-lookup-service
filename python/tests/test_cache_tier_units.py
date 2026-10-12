@@ -156,6 +156,15 @@ def test_suspect_replica_is_probed_with_a_short_deadline():
     assert a.timeouts[-2:] == [0.25, 3.0], "one probe succeeds, then a gets the normal deadline again"
 
 
+def test_a_disconnected_channel_gets_the_short_deadline_even_if_it_never_failed():
+    a, b = FakeStub(), FakeStub()
+    lb = make(a, b)
+    lb.probe_timeout = 0.25
+    lb.replicas[0].state = grpc.ChannelConnectivity.IDLE  # connection dropped, no request failed yet
+    lb.call("ByParcel", None, 3.0)
+    assert a.timeouts == [0.25]
+
+
 def test_down_replica_is_skipped_until_cooldown_ends():
     clock = Clock()
     a, b = FakeStub(grpc.StatusCode.UNAVAILABLE), FakeStub()

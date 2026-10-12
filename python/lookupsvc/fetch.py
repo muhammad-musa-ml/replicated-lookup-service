@@ -39,9 +39,11 @@ def join_rows(tax_rows, address_rows):
     """Address points supply parcel/address/zip, tax parcels the numbers.
     Address points whose parcel is not in the tax table are dropped, and so are
     repeated (parcel, address) pairs. Returns (rows, dropped_unmatched, dropped_dupes)."""
+    # keep only the columns we use; the full tax rows have 130 columns
+    keep = ("CurrentTotal", "CurrentLand", "CurrentImpr", "LotSize", "YearBuilt", "TotalLivingArea")
     tax = {}
     for r in tax_rows:
-        tax.setdefault(r["Parcel"].strip(), r)
+        tax.setdefault(r["Parcel"].strip(), {k: r[k] for k in keep})
 
     seen = set()
     out = []

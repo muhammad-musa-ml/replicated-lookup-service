@@ -1,0 +1,21 @@
+# Overlay for tests and CI: every replica serves the small synthetic dataset in
+# testdata/ and nothing is downloaded.
+#   docker compose -f docker-compose.yml -f docker-compose.fixture.yml --profile all up -d
+
+x-fixture: &fixture
+  volumes:
+    - ./testdata:/data:ro
+  environment:
+    DATA_PATH: /data/sample.csv.gz
+
+services:
+  data-init:
+    command: ["true"]
+    volumes:
+      - ./testdata:/data:ro
+  dataset-py-1: *fixture
+  dataset-py-2: *fixture
+  dataset-java-1: *fixture
+  dataset-java-2: *fixture
+  dataset-go-1: *fixture
+  dataset-go-2: *fixture

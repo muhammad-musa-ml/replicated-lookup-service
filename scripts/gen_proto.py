@@ -31,6 +31,7 @@ def generate(proto_dir: Path, files: list[str], out: Path) -> None:
 
 
 if __name__ == "__main__":
-    for proto_dir, files, out in TARGETS:
+    targets = TARGETS[:1] if "--skip-legacy" in sys.argv else TARGETS
+    for proto_dir, files, out in targets:
         generate(proto_dir, files, out)
         print("generated", ", ".join(files), "->", out.relative_to(ROOT))

@@ -1,0 +1,13 @@
+.git
+.venv
+data
+**/__pycache__
+**/.pytest_cache
+python/lookupsvc/gen
+python/tests/legacy_gen
+go/lookuppb
+java/build
+java/.gradle
+bench/results
+bench/.scratch
+.tools
