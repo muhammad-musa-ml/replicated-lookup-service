@@ -12,7 +12,7 @@ from grpc_tools import protoc
 ROOT = Path(__file__).resolve().parent.parent
 TARGETS = [
     (ROOT / "proto", ["lookup.proto", "table.proto"], ROOT / "python" / "lookupsvc" / "gen"),
-    (ROOT / "proto" / "legacy", ["lookup_v1.proto"], ROOT / "python" / "tests" / "legacy_gen"),
+    (ROOT / "proto-v1", ["lookup_v1.proto"], ROOT / "python" / "tests" / "legacy_gen"),
 ]
 
 

@@ -11,7 +11,7 @@ option java_package = "dev.rls.lookup";
 //   v2: adds ByZip, the error string and the match total. The bool is deprecated
 //       but kept so a v1 peer on either side of the wire still works: v2 servers
 //       set both fields, v2 clients read either. Do not reuse field number 2.
-// proto/legacy/lookup_v1.proto is the frozen v1 contract used by the
+// proto-v1/lookup_v1.proto is the frozen v1 contract used by the
 // compatibility tests.
 
 service Lookup {
