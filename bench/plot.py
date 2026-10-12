@@ -71,9 +71,9 @@ def latency():
     save(fig, "latency")
 
 
-def failover():
-    ev = read_csv("failover_events")
-    summary = read_csv("failover")
+def failover(name="failover"):
+    ev = read_csv(name + "_events")
+    summary = read_csv(name)
     fig, ax = plt.subplots()
     trials = sorted({int(r["trial"]) for r in ev})
     for trial in trials:
@@ -87,12 +87,12 @@ def failover():
         ax.plot(xs, [worst[x] for x in xs], linewidth=0.9, alpha=0.8, label=f"trial {trial}")
     ax.axvline(0, color="k", linewidth=1, linestyle="--")
     ax.set_yscale("log")
-    ax.set_xlabel("seconds since the replica was stopped")
+    ax.set_xlabel("seconds since the replica was " + ("paused" if "pause" in name else "stopped"))
     ax.set_ylabel("slowest request per 250 ms (ms)")
-    ax.set_title("Request latency around a replica failure", fontsize=10)
+    ax.set_title("Request latency around a replica " + ("pause" if "pause" in name else "stop"), fontsize=10)
     if len(trials) <= 6:
         ax.legend(fontsize=8)
-    save(fig, "failover")
+    save(fig, name)
 
 
 def formats():
@@ -128,7 +128,8 @@ def threads():
     save(fig, "threads")
 
 
-PLOTS = {"hitrate": hitrate, "latency": latency, "failover": failover, "formats": formats, "threads": threads}
+PLOTS = {"hitrate": hitrate, "latency": latency, "failover": failover,
+         "failover_pause": lambda: failover("failover_pause"), "formats": formats, "threads": threads}
 
 if __name__ == "__main__":
     wanted = sys.argv[1:] or [n for n in PLOTS if (RESULTS / f"{n}.csv").exists()]

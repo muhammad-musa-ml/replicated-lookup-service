@@ -38,7 +38,7 @@ The first start downloads about 77 MB from the city, builds the dataset, and the
     curl localhost:8200/healthz
     curl localhost:8200/metrics
 
-Every response carries `source` (`cache`, or the replica that answered), `attempts` (replicas that were unreachable before it) and `total` (matches before the `limit`). Errors are plain: 404 for no match, 400 for a bad key, 503 when no replica answers, 501 when a replica does not support the lookup.
+Every response carries `source` (`cache`, or the replica that answered), `attempts` (replicas that were unreachable before it) and `total` (matches before the `limit`). Errors are plain: 404 for no match, 400 for a bad key, 503 when no replica answers in time, 501 when a replica does not support the lookup.
 
 To use the Java or Python replicas instead, set `DATASET_IMPL` and `COMPOSE_PROFILES` in `.env` (both to `java` or `py`). `docker compose --profile all up -d` starts all three pairs, with host ports 8210-8215 for the replicas, which is what the conformance tool needs. `--profile monitoring` adds a Prometheus on 8220 that scrapes the cache tier.
 
@@ -90,6 +90,8 @@ With Go 1.25+ or JDK 21 installed locally, `go/gen.sh` followed by `go test ./..
     python bench/run_threads.py --ft-python <python3.13t>   # (e) GIL against free-threaded CPython at 1/2/4/8 threads
     python bench/plot.py
 
+`bench/run_all.sh` runs the whole pass in order (about an hour).
+
 (a), (b) and (c) need the stack running; they start throwaway cache-tier containers on ports 8290 and up. (e) needs a free-threaded build: `uv python install 3.13t`, or `bench/Dockerfile.freethreaded`.
 
 ## Results
@@ -107,7 +109,7 @@ TODO (measurement phase): fill in from `bench/results/` with the exact commands,
 
 TODO (measurement phase): state these once the numbers are in. Things I already know belong here:
 
-- a hung replica (as opposed to a dead one) is not failed over: only UNAVAILABLE, or a deadline on a channel that never connected, counts as unreachable, so DEADLINE_EXCEEDED on a live connection returns a 502 (`run_failover.py --how pause` shows it)
+- a hung replica costs one request a full upstream deadline (1 s by default) before the cache tier marks it down for the cooldown; after that it is probed with a 0.5 s deadline once per cooldown. Only lookups are retried this way (`run_failover.py --how pause` exercises it)
 - the cache tier runs one gunicorn worker with 16 threads, so one cache per container and the GIL applies; replicating the cache tier means separate caches
 - the upload service is a single process with an in-process lock, not something to scale out; aggregate sums are float64
 - address matching is exact after lower-casing and collapsing whitespace, no fuzzy matching, and key normalisation is ASCII only
