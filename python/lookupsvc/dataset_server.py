@@ -66,7 +66,9 @@ class LookupServicer(pb_grpc.LookupServicer):
         )
 
 
-def build_server(dataset: Dataset, port: int, replica: str, workers: int = 16) -> tuple[grpc.Server, int]:
+def build_server(
+    dataset: Dataset, port: int, replica: str, workers: int = 16, servicer=None
+) -> tuple[grpc.Server, int]:
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=workers),
         options=[
@@ -74,7 +76,7 @@ def build_server(dataset: Dataset, port: int, replica: str, workers: int = 16) -
             ("grpc.max_receive_message_length", MAX_MESSAGE),
         ],
     )
-    pb_grpc.add_LookupServicer_to_server(LookupServicer(dataset, replica), server)
+    pb_grpc.add_LookupServicer_to_server(servicer or LookupServicer(dataset, replica), server)
     bound = server.add_insecure_port(f"[::]:{port}")
     return server, bound
 

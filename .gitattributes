@@ -2,3 +2,4 @@
 *.gz binary
 *.parquet binary
 *.svg text
+*.bat text eol=crlf
