@@ -33,7 +33,7 @@ spec:
             - name: CACHE_SIZE
               value: "256"
             - name: UPSTREAM_TIMEOUT
-              value: "2.0"
+              value: "1.0"
             - name: COOLDOWN
               value: "5.0"
           ports:

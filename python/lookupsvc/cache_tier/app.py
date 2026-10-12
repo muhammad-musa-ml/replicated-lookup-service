@@ -26,7 +26,7 @@ MAX_LIMIT = 5000
 class Config:
     replicas: list  # [(name, target)]
     cache_size: int = 256
-    upstream_timeout: float = 2.0
+    upstream_timeout: float = 1.0
     cooldown: float = 5.0
     probe_timeout: float = 0.5
     default_limit: int = 100
@@ -43,7 +43,7 @@ class Config:
         return cls(
             replicas=replicas,
             cache_size=int(env.get("CACHE_SIZE", "256")),
-            upstream_timeout=float(env.get("UPSTREAM_TIMEOUT", "2.0")),
+            upstream_timeout=float(env.get("UPSTREAM_TIMEOUT", "1.0")),
             cooldown=float(env.get("COOLDOWN", "5.0")),
             probe_timeout=float(env.get("PROBE_TIMEOUT", "0.5")),
             default_limit=int(env.get("DEFAULT_LIMIT", "100")),

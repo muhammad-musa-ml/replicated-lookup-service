@@ -114,7 +114,7 @@ services:
     environment:
       REPLICAS: "dataset-${DATASET_IMPL:-go}-1=dataset-${DATASET_IMPL:-go}-1:50051,dataset-${DATASET_IMPL:-go}-2=dataset-${DATASET_IMPL:-go}-2:50051"
       CACHE_SIZE: ${CACHE_SIZE:-256}
-      UPSTREAM_TIMEOUT: "2.0"
+      UPSTREAM_TIMEOUT: "1.0"
       COOLDOWN: "5.0"
     ports: ["${CACHE_PORT:-8200}:8000"]
     mem_limit: 256m
