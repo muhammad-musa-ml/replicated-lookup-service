@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package lookup;
+
+option go_package = "github.com/muhammad-musa-ml/replicated-lookup-service/go/lookuppb;lookuppb";
+option java_multiple_files = true;
+option java_package = "dev.rls.lookup";
+
+// Contract history
+//   v1: ByParcel, ByAddress, ByStreet, Health. Failures were a bool on the reply.
+//   v2: adds ByZip, the error string and the match total. The bool is deprecated
+//       but kept so a v1 peer on either side of the wire still works: v2 servers
+//       set both fields, v2 clients read either. Do not reuse field number 2.
+// proto/legacy/lookup_v1.proto is the frozen v1 contract used by the
+// compatibility tests.
+
+service Lookup {
+  rpc ByParcel(ParcelRequest) returns (LookupReply);
+  rpc ByAddress(AddressRequest) returns (LookupReply);
+  rpc ByStreet(StreetRequest) returns (LookupReply);
+  rpc ByZip(ZipRequest) returns (LookupReply);
+  rpc Health(HealthRequest) returns (HealthReply);
+}
+
+message ParcelRequest {
+  string parcel = 1;
+}
+
+message AddressRequest {
+  string address = 1;
+}
+
+message StreetRequest {
+  string street = 1;
+  int32 limit = 2;
+}
+
+message ZipRequest {
+  string zip = 1;
+  int32 limit = 2;
+}
+
+message Property {
+  string parcel = 1;
+  string address = 2;
+  string street = 3;
+  string zip = 4;
+  int64 assessed_total = 5;
+  int64 assessed_land = 6;
+  int64 assessed_improvement = 7;
+  double lot_size = 8;
+  int32 year_built = 9;
+  int32 living_area = 10;
+}
+
+message LookupReply {
+  repeated Property properties = 1;
+  bool failed = 2 [deprecated = true];
+  // Empty on success. "no addresses found" when nothing matched,
+  // "empty key" for a blank request, anything else is a server fault.
+  string error = 3;
+  // Number of matches before any limit was applied.
+  int32 total = 4;
+}
+
+message HealthRequest {}
+
+message HealthReply {
+  bool serving = 1;
+  string implementation = 2;
+  string replica = 3;
+  int64 rows = 4;
+}

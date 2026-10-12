@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package tablestore;
+
+// Upload service: CSV uploads accumulate into one logical table. Every upload
+// is stored twice (CSV and Parquet) and aggregates can be answered from either.
+
+service Table {
+  rpc Upload(UploadRequest) returns (UploadReply);
+  rpc Aggregate(AggregateRequest) returns (AggregateReply);
+  rpc Info(InfoRequest) returns (InfoReply);
+}
+
+message UploadRequest {
+  // Raw CSV bytes including the header row.
+  bytes csv = 1;
+}
+
+message UploadReply {
+  int32 upload_id = 1;
+  int64 rows = 2;
+  int64 total_rows = 3;
+}
+
+enum Op {
+  OP_UNSPECIFIED = 0;
+  SUM = 1;
+  MEAN = 2;
+  COUNT = 3;
+}
+
+enum Format {
+  FORMAT_UNSPECIFIED = 0;
+  CSV = 1;
+  PARQUET = 2;
+}
+
+message AggregateRequest {
+  string column = 1;
+  Op op = 2;
+  Format format = 3;
+}
+
+message AggregateReply {
+  double value = 1;
+  // Number of non-null values that went into the aggregate.
+  int64 count = 2;
+  int32 uploads = 3;
+}
+
+message InfoRequest {}
+
+message InfoReply {
+  repeated string columns = 1;
+  int32 uploads = 2;
+  int64 total_rows = 3;
+}

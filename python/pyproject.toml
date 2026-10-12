@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lookupsvc"
+version = "0.1.0"
+description = "Replicated property lookup service for Madison, WI"
+requires-python = ">=3.10"
+dependencies = [
+    "grpcio>=1.70",
+    "protobuf>=5.29",
+    "pyarrow>=19",
+]
+
+[project.optional-dependencies]
+cache = [
+    "flask>=3.0",
+    "gunicorn>=22",
+    "prometheus_client>=0.20",
+]
+dev = [
+    "grpcio-tools>=1.70",
+    "pytest>=8",
+    "requests>=2.32",
+    "matplotlib>=3.9",
+]
+
+[tool.setuptools.packages.find]
+include = ["lookupsvc*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

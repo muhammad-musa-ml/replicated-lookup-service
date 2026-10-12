@@ -1,0 +1,22 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# raw and derived datasets are fetched, never committed
+data/
+!data/.gitkeep
+
+# generated protobuf code
+python/lookupsvc/gen/
+python/tests/legacy_gen/
+go/lookuppb/
+java/build/
+java/.gradle/
+
+# bench scratch (results/ is committed on purpose)
+bench/.scratch/
+
+# local tool downloads
+.tools/

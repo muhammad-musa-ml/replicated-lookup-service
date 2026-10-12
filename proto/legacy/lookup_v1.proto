@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+// Frozen copy of the first contract. Never edit it: the compatibility tests
+// build a server from this file and point the current cache tier at it.
+
+package lookup;
+
+service Lookup {
+  rpc ByParcel(ParcelRequest) returns (LookupReply);
+  rpc ByAddress(AddressRequest) returns (LookupReply);
+  rpc ByStreet(StreetRequest) returns (LookupReply);
+  rpc Health(HealthRequest) returns (HealthReply);
+}
+
+message ParcelRequest {
+  string parcel = 1;
+}
+
+message AddressRequest {
+  string address = 1;
+}
+
+message StreetRequest {
+  string street = 1;
+}
+
+message Property {
+  string parcel = 1;
+  string address = 2;
+  string street = 3;
+  string zip = 4;
+  int64 assessed_total = 5;
+  int64 assessed_land = 6;
+  int64 assessed_improvement = 7;
+  double lot_size = 8;
+  int32 year_built = 9;
+  int32 living_area = 10;
+}
+
+message LookupReply {
+  repeated Property properties = 1;
+  bool failed = 2;
+}
+
+message HealthRequest {}
+
+message HealthReply {
+  bool serving = 1;
+  string implementation = 2;
+  string replica = 3;
+  int64 rows = 4;
+}
