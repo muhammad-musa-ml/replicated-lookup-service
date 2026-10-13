@@ -71,6 +71,22 @@ def latency():
     save(fig, "latency")
 
 
+def impls():
+    rows = read_csv("impls")
+    names = list(dict.fromkeys(r["impl"] for r in rows))
+    fig, ax = plt.subplots()
+    width = 0.8 / len(names)
+    for i, name in enumerate(names):
+        sel = [r for r in rows if r["impl"] == name]
+        med = [summarize([float(r[p]) for r in sel])["median"] for p in ("p50_ms", "p90_ms", "p99_ms")]
+        ax.bar([x + i * width for x in range(3)], med, width, label=name)
+    ax.set_xticks([x + width * (len(names) - 1) / 2 for x in range(3)], ["p50", "p90", "p99"])
+    ax.set_ylabel("request latency (ms)")
+    ax.set_title("Latency by dataset implementation, cache tier cache off\nmedian over repetitions", fontsize=10)
+    ax.legend()
+    save(fig, "impls")
+
+
 def failover(name="failover"):
     ev = read_csv(name + "_events")
     summary = read_csv(name)
@@ -128,7 +144,7 @@ def threads():
     save(fig, "threads")
 
 
-PLOTS = {"hitrate": hitrate, "latency": latency, "failover": failover,
+PLOTS = {"hitrate": hitrate, "latency": latency, "impls": impls, "failover": failover,
          "failover_pause": lambda: failover("failover_pause"), "formats": formats, "threads": threads}
 
 if __name__ == "__main__":

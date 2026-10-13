@@ -35,3 +35,17 @@ def test_write_meta_records_command_and_commit(tmp_path, monkeypatch):
     meta = json.loads((tmp_path / "exp.meta.json").read_text())
     assert meta["command"] == "python run.py --reps 5" and meta["parameters"] == {"reps": 5}
     assert meta["commit"]
+
+
+def test_summarize_script_writes_a_table_from_the_csvs(tmp_path, monkeypatch):
+    import summarize
+
+    monkeypatch.setattr(common, "RESULTS", tmp_path)
+    monkeypatch.setattr(summarize, "RESULTS", tmp_path)
+    monkeypatch.setattr(summarize, "read_csv", common.read_csv)
+    rows = [{"impl": "go", "rep": r, "seed": r, "threads": 4, "requests": 100, "hit_rate": 0, "errors": 0,
+             "p50_ms": 5 + r, "p90_ms": 7, "p99_ms": 9, "max_ms": 12, "rps": 400} for r in range(5)]
+    common.write_csv("impls", rows)
+    summarize.main()
+    text = (tmp_path / "summary.md").read_text()
+    assert "| go | 7.00 (5.00-9.00) |" in text
