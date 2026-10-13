@@ -68,11 +68,11 @@ def test_redact_removes_repo_and_home_paths_in_both_slash_styles():
     bs = chr(92)
     root, home = common.ROOT, common.Path.home()
     text = [f"{root}{bs}.venv{bs}Scripts{bs}python.exe", f"{root.as_posix()}/bench/run.py".upper(),
-            f"{home}{bs}AppData{bs}x"]
+            f"{home}{bs}tools{bs}x"]
     out = common.redact({"a": text, "n": 3, "nested": {"p": f"{home.as_posix()}/uv/python"}})
     assert out["a"][0] == f"<repo>{bs}.venv{bs}Scripts{bs}python.exe"
     assert out["a"][1].startswith("<repo>")
-    assert out["a"][2] == f"<home>{bs}AppData{bs}x"
+    assert out["a"][2] == f"<home>{bs}tools{bs}x"
     assert out["nested"]["p"] == "<home>/uv/python"
     assert out["n"] == 3
 
@@ -88,7 +88,7 @@ def test_write_meta_never_records_local_paths(tmp_path, monkeypatch):
     monkeypatch.setattr(common, "RESULTS", tmp_path)
     monkeypatch.setattr(common, "machine_info", lambda: {"cpus": 1})
     exe = str(common.ROOT / ".venv" / "Scripts" / "python.exe")
-    home_exe = str(common.Path.home() / "AppData" / "uv" / "python.exe")
+    home_exe = str(common.Path.home() / "tools" / "uv" / "python.exe")
     common.write_meta("exp", ["bench/run.py", "--python", exe], {"parameters": {"python": home_exe}})
     text = (tmp_path / "exp.meta.json").read_text()
     # json escapes backslashes, so check the parts a path is made of as well as the whole
