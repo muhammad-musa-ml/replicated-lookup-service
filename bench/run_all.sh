@@ -45,7 +45,8 @@ python bench/run_impls.py                     # (f) Python, Java and Go replicas
 docker compose --profile all down -v -t 1     # the next two need no containers
 python bench/run_formats.py                   # (d) CSV against Parquet
 python bench/run_threads.py --ft-python "$FT_PYTHON"            # (e) GIL against free-threaded
-python bench/run_threads.py --ft-python "$FT_PYTHON" --requests 1000000 --keys 5000 --cache 5000 --passes 1 \n    --out threads_lockbound                     # (e) the same with the cache lock as the bottleneck
+python bench/run_threads.py --ft-python "$FT_PYTHON" --requests 1000000 --keys 5000 --cache 5000 --passes 1 \
+    --out threads_lockbound                     # (e) the same with the cache lock as the bottleneck
 python bench/plot.py
 python bench/summarize.py
 python bench/machine_state.py after
