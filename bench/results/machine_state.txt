@@ -34,3 +34,12 @@ cpu busy percent, five samples two seconds apart: 39, 30, 17, 36, 29
 docker containers running (other projects, not mine): 9
 docker containers running (mine): 4
 
+before lock-bound threads run snapshot, UTC 2026-10-13T03:02:29
+os: Windows 11 AMD64
+cpu: 13th Gen Intel(R) Core(TM) i7-13700HX, logical cpus: 24
+total memory GiB: 29.7, free GiB: 3.2
+docker VM memory GiB: 14.5, docker VM cpus: 24
+cpu busy percent, five samples two seconds apart: 27, 7, 19, 22, 18
+docker containers running (other projects, not mine): 9
+docker containers running (mine): 0
+

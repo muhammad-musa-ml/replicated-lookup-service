@@ -83,3 +83,23 @@ Speedup of the median against one thread of the same mode:
 
 Interpreters: cpython-gil 3.13.5, freethreaded-gil 3.13.7, freethreaded-nogil 3.13.7.
 
+## GIL against free-threaded CPython, lock-bound workload (seconds for the whole workload, median and min-max)
+
+| threads | cpython-gil | freethreaded-gil | freethreaded-nogil |
+|---|---|---|---|
+| 1 | 1.04 (0.97-1.27) | 1.59 (1.57-1.66) | 1.66 (1.55-1.75) |
+| 2 | 1.06 (0.99-1.08) | 1.75 (1.69-2.00) | 1.59 (1.57-1.72) |
+| 4 | 1.07 (1.04-1.25) | 1.75 (1.71-1.84) | 3.66 (3.58-3.97) |
+| 8 | 1.10 (1.03-1.19) | 1.85 (1.78-1.98) | 6.22 (5.56-6.45) |
+
+Speedup of the median against one thread of the same mode:
+
+| threads | cpython-gil | freethreaded-gil | freethreaded-nogil |
+|---|---|---|---|
+| 1 | 1.00x | 1.00x | 1.00x |
+| 2 | 0.98x | 0.91x | 1.04x |
+| 4 | 0.97x | 0.91x | 0.45x |
+| 8 | 0.95x | 0.86x | 0.27x |
+
+Interpreters: cpython-gil 3.13.5, freethreaded-gil 3.13.7, freethreaded-nogil 3.13.7.
+
