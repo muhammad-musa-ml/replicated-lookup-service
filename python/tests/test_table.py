@@ -132,7 +132,7 @@ ROWS = 5
 
 def hammer(root, lock, uploaders=8):
     store = TableStore(root, lock=lock, sequence=SlowSequence())
-    store.upload(csv([f"0,0.0,seed"] * ROWS))
+    store.upload(csv(["0,0.0,seed"] * ROWS))
     start = threading.Barrier(uploaders)
 
     errors = []
@@ -176,7 +176,7 @@ def test_the_same_scenario_corrupts_the_table_without_the_lock(tmp_path):
 
 def test_readers_only_ever_see_whole_uploads(tmp_path):
     store = TableStore(tmp_path / "t")
-    store.upload(csv([f"0,0.0,seed"] * ROWS))
+    store.upload(csv(["0,0.0,seed"] * ROWS))
     stop = threading.Event()
     seen, errors = [], []
 

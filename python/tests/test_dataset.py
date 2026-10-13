@@ -2,7 +2,7 @@ import gzip
 
 import pytest
 
-from lookupsvc.data import COLUMNS, Dataset, load_rows, norm
+from lookupsvc.data import COLUMNS, load_rows, norm
 from lookupsvc.gen import lookup_pb2 as pb
 
 
