@@ -4,6 +4,7 @@ import csv
 import json
 import os
 import platform
+import re
 import statistics
 import subprocess
 import sys
@@ -53,6 +54,41 @@ def machine_info() -> dict:
     }
 
 
+def redact(value):
+    """Meta files are committed, so they must not carry local paths. Any string
+    holding the repo checkout or the user's home directory (either slash style,
+    any case) has that part replaced by a placeholder."""
+    if isinstance(value, dict):
+        return {k: redact(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [redact(v) for v in value]
+    if not isinstance(value, str):
+        return value
+    for base, placeholder in ((ROOT, "<repo>"), (Path.home(), "<home>")):
+        for form in {str(base), base.as_posix()}:
+            value = re.sub(re.escape(form), placeholder, value, flags=re.IGNORECASE)
+    return value
+
+
+def redact_argv(argv: list[str], path_flags: dict[str, str]) -> list[str]:
+    """Replace the value of each flag in path_flags (`--flag value` or
+    `--flag=value`) with its placeholder, e.g. {"--ft-python": "<free-threaded python>"}."""
+    out, skip = [], False
+    for i, arg in enumerate(argv):
+        if skip:
+            skip = False
+            continue
+        flag, eq, _ = arg.partition("=")
+        if flag in path_flags:
+            out.append(flag + (eq + path_flags[flag] if eq else ""))
+            if not eq:
+                out.append(path_flags[flag])
+                skip = True
+        else:
+            out.append(arg)
+    return out
+
+
 def write_meta(name: str, argv: list[str], extra: dict | None = None) -> None:
     RESULTS.mkdir(parents=True, exist_ok=True)
     meta = {
@@ -63,7 +99,7 @@ def write_meta(name: str, argv: list[str], extra: dict | None = None) -> None:
         "machine": machine_info(),
         **(extra or {}),
     }
-    (RESULTS / f"{name}.meta.json").write_text(json.dumps(meta, indent=2) + "\n")
+    (RESULTS / f"{name}.meta.json").write_text(json.dumps(redact(meta), indent=2) + "\n")
 
 
 def write_csv(name: str, rows: list[dict]) -> Path:

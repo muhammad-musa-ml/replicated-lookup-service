@@ -23,7 +23,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from common import DATASET, write_csv, write_meta
+from common import DATASET, redact_argv, write_csv, write_meta
 
 LOADGEN = Path(__file__).resolve().parent / "loadgen.py"
 
@@ -78,8 +78,12 @@ def main(argv=None) -> int:
     if len(checksums) != 1:
         raise SystemExit(f"runs disagree on the checksum: {checksums}")
     write_csv(args.out, rows)
-    write_meta(args.out, sys.argv[0:1] + (argv if argv is not None else sys.argv[1:]),
-               {"parameters": vars(args), "interpreters": versions, "checksum": checksums.pop()})
+    # interpreter locations are local to this machine; the meta file keeps only
+    # the version of each mode ("interpreters") and placeholders for the paths
+    placeholders = {"--standard-python": "<standard python>", "--ft-python": "<free-threaded python>"}
+    shown = redact_argv(sys.argv[0:1] + (argv if argv is not None else sys.argv[1:]), placeholders)
+    params = {**vars(args), "standard_python": "<standard python>", "ft_python": "<free-threaded python>"}
+    write_meta(args.out, shown, {"parameters": params, "interpreters": versions, "checksum": checksums.pop()})
     return 0
 
 

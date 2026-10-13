@@ -62,3 +62,36 @@ def test_upstream_counts_reads_the_cache_tier_metrics():
     )
     assert run_failover.upstream_counts(text, "dataset-go-1") == {
         "victim_errors_seen": 5, "answered_by_victim": 100, "answered_by_other": 250}
+
+
+def test_redact_removes_repo_and_home_paths_in_both_slash_styles():
+    bs = chr(92)
+    root, home = common.ROOT, common.Path.home()
+    text = [f"{root}{bs}.venv{bs}Scripts{bs}python.exe", f"{root.as_posix()}/bench/run.py".upper(),
+            f"{home}{bs}AppData{bs}x"]
+    out = common.redact({"a": text, "n": 3, "nested": {"p": f"{home.as_posix()}/uv/python"}})
+    assert out["a"][0] == f"<repo>{bs}.venv{bs}Scripts{bs}python.exe"
+    assert out["a"][1].startswith("<repo>")
+    assert out["a"][2] == f"<home>{bs}AppData{bs}x"
+    assert out["nested"]["p"] == "<home>/uv/python"
+    assert out["n"] == 3
+
+
+def test_redact_argv_handles_both_flag_styles():
+    flags = {"--ft-python": "<ft>", "--standard-python": "<std>"}
+    argv = ["run.py", "--ft-python", "/some/where/py", "--reps", "5", "--standard-python=/usr/bin/python"]
+    assert common.redact_argv(argv, flags) == [
+        "run.py", "--ft-python", "<ft>", "--reps", "5", "--standard-python=<std>"]
+
+
+def test_write_meta_never_records_local_paths(tmp_path, monkeypatch):
+    monkeypatch.setattr(common, "RESULTS", tmp_path)
+    monkeypatch.setattr(common, "machine_info", lambda: {"cpus": 1})
+    exe = str(common.ROOT / ".venv" / "Scripts" / "python.exe")
+    home_exe = str(common.Path.home() / "AppData" / "uv" / "python.exe")
+    common.write_meta("exp", ["bench/run.py", "--python", exe], {"parameters": {"python": home_exe}})
+    text = (tmp_path / "exp.meta.json").read_text()
+    # json escapes backslashes, so check the parts a path is made of as well as the whole
+    for needle in (str(common.ROOT), str(common.Path.home()), common.Path.home().name):
+        assert needle not in text and needle.replace(chr(92), chr(92) * 2) not in text
+    assert "<repo>" in text and "<home>" in text
