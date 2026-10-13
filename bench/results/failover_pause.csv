@@ -1,0 +1,6 @@
+trial,victim,how,threads,duration_s,kill_at_s,stop_command_s,requests,errors,baseline_p50_ms,baseline_p99_ms,max_latency_ms,slow_requests,recovery_s,first_error_after_kill_s,victim_errors_seen,answered_by_victim,answered_by_other
+0,dataset-go-1,pause,4,20,8.001,0.584,8549,0,9.005,15.345,1014.455,12,12.432,,12,2046,7003
+1,dataset-go-1,pause,4,20,8.001,0.594,8825,0,7.352,13.139,1015.648,12,12.431,,12,2426,6899
+2,dataset-go-1,pause,4,20,8.001,0.567,9433,0,7.369,12.516,1011.645,12,12.397,,12,2437,7496
+3,dataset-go-1,pause,4,20,8.001,0.555,11041,0,6.08,10.534,1009.597,12,12.384,,12,2869,8672
+4,dataset-go-1,pause,4,20,8.001,0.537,10711,0,6.402,11.488,1009.187,12,12.339,,12,2724,8487

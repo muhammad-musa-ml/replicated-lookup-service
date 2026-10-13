@@ -1,0 +1,29 @@
+{
+  "experiment": "failover",
+  "command": "python bench/run_failover.py",
+  "finished_utc": "2026-10-13T02:49:28+00:00",
+  "commit": "ab98e1ac099a86b60e2502bc7d7975b439bae865+dirty",
+  "machine": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 191 Stepping 2, GenuineIntel",
+    "logical_cpus": 24,
+    "python": "3.13.5",
+    "docker_cpus": 24,
+    "docker_mem_bytes": 15550525440,
+    "docker_version": "28.4.0",
+    "docker_os": "Docker Desktop"
+  },
+  "parameters": {
+    "trials": 5,
+    "duration": 20,
+    "kill_at": 8,
+    "threads": 4,
+    "keys": 0,
+    "skew": 0.8,
+    "slow_factor": 3.0,
+    "settle": 8,
+    "how": "stop",
+    "seed": 1,
+    "out": "failover"
+  }
+}

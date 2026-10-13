@@ -1,0 +1,35 @@
+{
+  "experiment": "threads",
+  "command": "python bench/run_threads.py --ft-python <free-threaded python>",
+  "finished_utc": "2026-10-13T02:44:24+00:00",
+  "commit": "fdc7b4dac92001d1a9465a99e82a131c424cde06+dirty",
+  "machine": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 191 Stepping 2, GenuineIntel",
+    "logical_cpus": 24,
+    "python": "3.13.5",
+    "docker_cpus": 24,
+    "docker_mem_bytes": 15550525440,
+    "docker_version": "28.4.0",
+    "docker_os": "Docker Desktop"
+  },
+  "parameters": {
+    "standard_python": "<standard python>",
+    "ft_python": "<free-threaded python>",
+    "threads": "1,2,4,8",
+    "requests": 100000,
+    "cache": 200,
+    "keys": 20000,
+    "skew": 1.1,
+    "seed": 1,
+    "passes": 50,
+    "reps": 5,
+    "out": "threads"
+  },
+  "interpreters": {
+    "cpython-gil": "3.13.5",
+    "freethreaded-gil": "3.13.7",
+    "freethreaded-nogil": "3.13.7"
+  },
+  "checksum": 286974220700
+}

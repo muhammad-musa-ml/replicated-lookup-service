@@ -1,0 +1,13 @@
+  20000 requests
+  40000 requests
+  60000 requests
+  80000 requests
+  100000 requests
+  120000 requests
+  140000 requests
+  160000 requests
+  180000 requests
+  200000 requests
+  220000 requests
+232892 requests x 3 implementations: 0 differences, 0 errors
+elapsed seconds: 658
