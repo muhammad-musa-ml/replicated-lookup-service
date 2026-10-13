@@ -49,3 +49,17 @@ def test_summarize_script_writes_a_table_from_the_csvs(tmp_path, monkeypatch):
     summarize.main()
     text = (tmp_path / "summary.md").read_text()
     assert "| go | 7.00 (5.00-9.00) |" in text
+
+
+def test_upstream_counts_reads_the_cache_tier_metrics():
+    import run_failover
+
+    text = (
+        '# HELP x\nrls_upstream_errors_total{code="UNAVAILABLE",replica="dataset-go-1"} 3.0\n'
+        'rls_upstream_errors_total{code="DEADLINE_EXCEEDED",replica="dataset-go-1"} 2.0\n'
+        'rls_upstream_errors_total{code="UNAVAILABLE",replica="dataset-go-2"} 9.0\n'
+        'rls_upstream_answers_total{replica="dataset-go-1"} 100.0\n'
+        'rls_upstream_answers_total{replica="dataset-go-2"} 250.0\n'
+    )
+    assert run_failover.upstream_counts(text, "dataset-go-1") == {
+        "victim_errors_seen": 5, "answered_by_victim": 100, "answered_by_other": 250}

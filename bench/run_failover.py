@@ -13,11 +13,30 @@ than --slow-factor times the pre-kill p99.
 """
 import argparse
 import sys
+import re
 import threading
 import time
 
 import loadgen
+import requests
 from common import DATASET, BenchCache, compose, impl, sh, stack_ready, write_csv, write_meta, PROJECT
+
+
+def upstream_counts(metrics_text: str, victim: str) -> dict:
+    """What the cache tier itself saw: gRPC errors from the victim, and how many
+    lookups each replica answered. Replica names equal the compose service names."""
+    errors = answered_victim = answered_other = 0
+    for name, labels, value in re.findall(r"^(rls_upstream_\w+)\{([^}]*)\} ([0-9.e+]+)$", metrics_text, re.M):
+        replica = re.search(r'replica="([^"]*)"', labels).group(1)
+        n = int(float(value))
+        if name == "rls_upstream_errors_total" and replica == victim:
+            errors += n
+        elif name == "rls_upstream_answers_total":
+            if replica == victim:
+                answered_victim += n
+            else:
+                answered_other += n
+    return {"victim_errors_seen": errors, "answered_by_victim": answered_victim, "answered_by_other": answered_other}
 
 
 def restore(victim: str, how: str) -> None:
@@ -50,6 +69,7 @@ def one_trial(args, parcels, trial, victim):
         threading.Timer(args.duration, stop.set).start()
         res = loadgen.run_load(make_fetch, work[500:], args.threads, loadgen.BoundedCache(0),
                                record_events=True, t0=t0, stop=stop)
+        seen = upstream_counts(requests.get(cache.url + "/metrics", timeout=5).text, victim)
     restore(victim, args.how)
     time.sleep(args.settle)
 
@@ -70,6 +90,7 @@ def one_trial(args, parcels, trial, victim):
         "slow_requests": len(slow),
         "recovery_s": round(max((t + lat for t, lat in slow), default=kill_t) - kill_t, 3),
         "first_error_after_kill_s": round(failed[0][0] - kill_t, 3) if failed else "",
+        **seen,
     }
     return summary, [(trial, round(t, 4), round(lat * 1000, 3), int(ok)) for t, lat, ok in events]
 
