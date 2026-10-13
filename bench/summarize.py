@@ -97,9 +97,9 @@ def formats():
     return out
 
 
-def threads():
-    rows = read_csv("threads")
-    out = ["## GIL against free-threaded CPython (seconds for the whole workload, median and min-max)", ""]
+def threads(name="threads", title="GIL against free-threaded CPython"):
+    rows = read_csv(name)
+    out = [f"## {title} (seconds for the whole workload, median and min-max)", ""]
     g = by(rows, lambda r: (r["mode"], int(r["threads"])))
     modes = list(dict.fromkeys(r["mode"] for r in rows))
     counts = sorted({int(r["threads"]) for r in rows})
@@ -130,6 +130,8 @@ def main():
         out += formats()
     if exists("threads"):
         out += threads()
+    if exists("threads_lockbound"):
+        out += threads("threads_lockbound", "GIL against free-threaded CPython, lock-bound workload")
     (RESULTS / "summary.md").write_text("\n".join(out) + "\n", encoding="utf-8")
     print("wrote", RESULTS / "summary.md")
 

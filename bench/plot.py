@@ -128,8 +128,8 @@ def formats():
     save(fig, "formats")
 
 
-def threads():
-    rows = read_csv("threads")
+def threads(name="threads"):
+    rows = read_csv(name)
     fig, ax = plt.subplots()
     for mode in dict.fromkeys(r["mode"] for r in rows):
         groups = grouped([r for r in rows if r["mode"] == mode], lambda r: int(r["threads"]), "seconds")
@@ -139,13 +139,15 @@ def threads():
     ax.set_xticks(xs, [str(x) for x in xs])
     ax.set_xlabel("threads")
     ax.set_ylabel("seconds for the whole workload")
-    ax.set_title("Load client run time by interpreter mode\nmedian and min-max over repetitions", fontsize=10)
+    kind = ", lock-bound workload" if "lock" in name else ""
+    ax.set_title(f"Load client run time by interpreter mode{kind}\nmedian and min-max over repetitions", fontsize=10)
     ax.legend()
-    save(fig, "threads")
+    save(fig, name)
 
 
 PLOTS = {"hitrate": hitrate, "latency": latency, "impls": impls, "failover": failover,
-         "failover_pause": lambda: failover("failover_pause"), "formats": formats, "threads": threads}
+         "failover_pause": lambda: failover("failover_pause"), "formats": formats, "threads": threads,
+         "threads_lockbound": lambda: threads("threads_lockbound")}
 
 if __name__ == "__main__":
     wanted = sys.argv[1:] or [n for n in PLOTS if (RESULTS / f"{n}.csv").exists()]
