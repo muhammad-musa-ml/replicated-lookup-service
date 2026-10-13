@@ -69,12 +69,15 @@ def failover(name, title):
     rows = read_csv(name)
     out = [f"## {title}", ""]
     out += table(
-        ["trials", "errors (all trials)", "requests (median)", "baseline p99 ms", "max latency ms", "slow requests", "recovery s"],
+        ["trials", "errors (all trials)", "requests (median)", "baseline p99 ms", "max latency ms", "slow requests", "recovery s",
+         "victim errors seen by cache tier", "answered by victim", "answered by other"],
         [[len(rows), sum(int(r["errors"]) for r in rows), cell([r["requests"] for r in rows], 0),
           cell([r["baseline_p99_ms"] for r in rows], 1), cell([r["max_latency_ms"] for r in rows], 1),
-          cell([r["slow_requests"] for r in rows], 0), cell([r["recovery_s"] for r in rows], 2)]])
+          cell([r["slow_requests"] for r in rows], 0), cell([r["recovery_s"] for r in rows], 2),
+          cell([r["victim_errors_seen"] for r in rows], 0), cell([r["answered_by_victim"] for r in rows], 0),
+          cell([r["answered_by_other"] for r in rows], 0)]])
     out += ["", f"victim {rows[0]['victim']}, {rows[0]['threads']} client threads, {rows[0]['duration_s']} s per trial, "
-                f"stopped at {rows[0]['kill_at_s']} s (median). Slow means over 3x the pre-failure p99; "
+                f"injected at {rows[0]['kill_at_s']} s (median). Slow means over 3x the pre-failure p99; "
                 "recovery is the time from the failure to the last slow request.", ""]
     return out
 
