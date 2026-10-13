@@ -2,7 +2,7 @@
   "experiment": "threads_lockbound",
   "command": "python bench/run_threads.py --ft-python <free-threaded python> --requests 1000000 --keys 5000 --cache 5000 --passes 1 --out threads_lockbound",
   "finished_utc": "2026-10-13T03:06:04+00:00",
-  "commit": "459f471b125cdd8fb7e1d509abe74696f3aa02d1+dirty",
+  "commit": "70208bdd13b60b135378a6156210d73165f5c115+dirty",
   "machine": {
     "platform": "Windows-11-10.0.26200-SP0",
     "processor": "Intel64 Family 6 Model 191 Stepping 2, GenuineIntel",
