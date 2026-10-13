@@ -49,7 +49,7 @@ You need Docker with Compose v2. I used Docker 28.4 on Windows 11 (`bench/result
 
 3. Tear it down with `docker compose --profile all --profile monitoring down -v`.
 
-To use the Java or Python replicas instead of Go, set `DATASET_IMPL` and `COMPOSE_PROFILES` in `.env` to `java` or `py`. `docker compose --profile all up -d` starts all three pairs on host ports 8210-8215 (Python 8210/8211, Java 8212/8213, Go 8214/8215), which the conformance tool and the implementation comparison need.
+The repo ships a `.env` with `DATASET_IMPL=go` and `COMPOSE_PROFILES=go`. Without it, `DATASET_IMPL` still defaults to go (`docker-compose.yml` says `${DATASET_IMPL:-go}`, so the cache tier looks for `dataset-go-1` and `dataset-go-2`), but every dataset service sits behind a compose profile, so with `COMPOSE_PROFILES` unset no replica starts; run `docker compose --profile go up -d --build` in that case. To use the Java or Python replicas instead of Go, set `DATASET_IMPL` and `COMPOSE_PROFILES` in `.env` to `java` or `py`. `docker compose --profile all up -d` starts all three pairs on host ports 8210-8215 (Python 8210/8211, Java 8212/8213, Go 8214/8215), which the conformance tool and the implementation comparison need.
 
 ### The HTTP API
 
