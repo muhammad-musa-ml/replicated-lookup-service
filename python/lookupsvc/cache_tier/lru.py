@@ -3,8 +3,9 @@ from collections import OrderedDict
 
 
 class LRUCache:
-    """Fixed-size LRU. One lock guards the dict; every operation is O(1).
-    Capacity 0 turns the cache off."""
+    """Fixed-size LRU. One lock guards the dict. get and put are O(1); keys()
+    copies the keys, is O(n), and exists for the tests. Capacity 0 turns the
+    cache off."""
 
     def __init__(self, capacity: int):
         if capacity < 0:
